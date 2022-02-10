@@ -4,12 +4,23 @@ export class CreateList{
         this.id = name.split(' ').join('-')
     }
 
+
     update(){
         const listsDel = document.querySelectorAll('.delete-list')
         listsDel.forEach(el => {
             el.addEventListener('click', (e) => {
-                console.log(e);
-                document.querySelector('.lists-container').removeChild(e.path[1])
+                e.target.parentNode.style.opacity = '0'
+                let dataArray = JSON.parse(localStorage.getItem('MyLists'))
+                let newData = []
+                dataArray.forEach(item => {
+                    if(item.id != e.target.parentNode.getAttribute('id')){
+                        newData.push(item)
+                    }
+                })
+                localStorage.setItem('MyLists', JSON.stringify(newData))
+                setTimeout(() => {
+                    document.querySelector('.lists-container').removeChild(e.path[1])
+                }, 1500);
             })
         })
         const lists = document.querySelectorAll('.list')
@@ -24,17 +35,13 @@ export class CreateList{
                 taskInput.setAttribute('value', e.target.value)
             })
             btnAddTask.addEventListener('click', () => {
-                if(taskInput.getAttribute('value') != ""){
+                if(taskInput.getAttribute('value') && taskInput.getAttribute('value') != ""){
                     let task = new CreateTask(listUl, taskInput.getAttribute('value'))
                     task.addTask()
                     task.updateTasks()
+                    task.saveTask()
                     taskInput.setAttribute('value', "")
                     taskInput.value = ""
-                } else {
-                    taskInput.style.border = '2px solid red'
-                    setTimeout(() => {
-                        taskInput.style.border = ""
-                    }, 3000);
                 }
             })
 
@@ -55,6 +62,25 @@ export class CreateList{
             <ul id="${this.id}Ul"></ul>
         `
         document.querySelector('.lists-container').appendChild(list)
+        setTimeout(() => {
+            list.style.opacity = '1'
+        }, 1000);
+    }
+    saveList(){
+        let datas = {
+            name: this.name,
+            id: this.id,
+            tasks: []
+        }
+        if(localStorage.getItem('MyLists')){
+            let dataArray = JSON.parse(localStorage.getItem('MyLists'))
+            dataArray.push(datas)
+            localStorage.setItem('MyLists', JSON.stringify(dataArray))
+        } else {
+            let dataArray = []
+            dataArray.push(datas)
+            localStorage.setItem('MyLists', JSON.stringify(dataArray))
+        }
     }
 }
 
@@ -69,7 +95,22 @@ export class CreateTask{
         let tasksListener = document.querySelectorAll('.delete-task')
         tasksListener.forEach(item => {
             item.addEventListener('click', e => {
-                e.path[3].removeChild(e.path[2])
+                e.path[2].style.opacity = "0"
+                let allLists = JSON.parse(localStorage.getItem('MyLists'))
+                for (const list of allLists) {
+                    let newTasks = []
+                    for (const task of list.tasks) {
+                        if(task.id + 'Task' != e.path[2].getAttribute('id')){
+                            newTasks.push(task)
+                        }
+                    }
+                    list.tasks = newTasks
+                }
+                localStorage.setItem('MyLists', JSON.stringify(allLists))
+
+                setTimeout(() => {
+                    e.path[3].removeChild(e.path[2])
+                }, 1000);
             })
         })
     }
@@ -81,6 +122,42 @@ export class CreateTask{
             <p class="delete-task"><i class="fa-solid fa-trash-can"></i></p>
         `
         task.setAttribute('id', this.id + 'Task')
+        task.style.opacity = "0"
         this.target.appendChild(task)
+        setTimeout(() => {
+            task.style.opacity = "1"
+        }, 1000);
+    }
+
+    saveTask(){
+        let datas = {
+            task: this.task,
+            id: this.id
+        }
+
+        let dataArray = JSON.parse(localStorage.getItem('MyLists'))
+        dataArray.forEach(list => {
+            if(list.name + 'Ul' == this.target.getAttribute('id')){
+                list.tasks.push(datas)
+            }
+        })
+        localStorage.setItem('MyLists', JSON.stringify(dataArray))
+    }
+}
+
+export function checkStorage(){
+    if(localStorage.getItem('MyLists')){
+        let allLists = JSON.parse(localStorage.getItem('MyLists'))
+        for (const list of allLists) {
+            let listCreate = new CreateList(list.name)
+            listCreate.addList()
+            listCreate.update()
+            for (const task of list.tasks) {
+                let ul = document.getElementById(list.id + 'Ul')
+                let displayTask = new CreateTask(ul, task.task)
+                displayTask.addTask()
+                displayTask.updateTasks()
+            }
+        }
     }
 }
